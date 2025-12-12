@@ -83,31 +83,49 @@ CREATE TABLE TimeTracking (
 );
 ```
 #### Таблица checks
+Факт того, что студент начал проверку по задаче.
+Каждая P2P или Verter проверка всегда привязана к конкретной записи Checks.
+
 <img width="471" height="535" alt="image" src="https://github.com/user-attachments/assets/7a1be88e-dbd2-4532-aabf-0727ab2f27a2" />
 
-#### Таблица friends
+#### Таблицы friends и recommendations
+Дополнительные социальные механики студентов.
+
 <img width="316" height="540" alt="image" src="https://github.com/user-attachments/assets/a40ff67d-1eab-4753-be30-bc93bb5efea7" />
 
-#### Таблица p2p
-<img width="655" height="540" alt="image" src="https://github.com/user-attachments/assets/61006df7-2a94-4387-b853-7b1f8293aa74" />
-
-#### Таблица peers
-<img width="291" height="539" alt="image" src="https://github.com/user-attachments/assets/6f5685d4-4f4f-4e01-a0b2-386591defb6f" />
-
-#### Таблица recommendations
 <img width="368" height="539" alt="image" src="https://github.com/user-attachments/assets/1fa57d92-d8c2-4ec4-a7cc-8ce38b0d8fd4" />
 
+#### Таблицы p2p и verter
+Отдельные таблицы для двух типов проверок.
+Обе используют ENUM check_status, что исключает ошибочные значения и делает запросы проще.
+
+<img width="655" height="540" alt="image" src="https://github.com/user-attachments/assets/61006df7-2a94-4387-b853-7b1f8293aa74" />
+
+<img width="552" height="542" alt="image" src="https://github.com/user-attachments/assets/eb879ee7-639d-4fc6-af9f-ea51ee006f0e" />
+
+#### Таблица peers
+Содержит список всех студентов/пиров.
+nickname уникален — правильно, так исключаются дубликаты.
+
+<img width="291" height="539" alt="image" src="https://github.com/user-attachments/assets/6f5685d4-4f4f-4e01-a0b2-386591defb6f" />
+
 #### Таблица tasks
+Список всех заданий + максимальный XP, который можно получить.
+Это пригодится при автоматическом начислении XP.
+
 <img width="371" height="541" alt="image" src="https://github.com/user-attachments/assets/320db1da-06e3-48d3-b2fd-ae5dcaa61049" />
 
 #### Таблица timetracking
+Входы/выходы студентов с кампуса.
+Используется в аналитике посещаемости.
+
 <img width="554" height="537" alt="image" src="https://github.com/user-attachments/assets/3d9f7fd7-fb82-4fd4-aa31-7a87a7acf1aa" />
 
 #### Таблица transferredpoints
-<img width="435" height="544" alt="image" src="https://github.com/user-attachments/assets/2c788331-8eba-4a2a-a4ed-54000b364887" />
+Учёт баллов, которые переходят между пирами в результате P2P-проверок.
+Ты правильно связал обе стороны с Peers.
 
-#### Таблица verter
-<img width="552" height="542" alt="image" src="https://github.com/user-attachments/assets/eb879ee7-639d-4fc6-af9f-ea51ee006f0e" />
+<img width="435" height="544" alt="image" src="https://github.com/user-attachments/assets/2c788331-8eba-4a2a-a4ed-54000b364887" />
 
 #### Таблица xp
 <img width="332" height="544" alt="image" src="https://github.com/user-attachments/assets/0f154ca4-7fb5-4fe3-b961-ff151b86c11c" />
@@ -142,6 +160,12 @@ BEGIN
 END;
 $$;
 ```
+Процедура полностью автоматизирует процесс создания P2P проверки:
+- находит ID студента, проверяющего и задачу,
+- создаёт запись в Checks,
+- тут же прикрепляет к ней запись в P2P.
+Это очень удобный подход — исключает необходимость вручную добавлять две записи.
+
 <img width="491" height="714" alt="image" src="https://github.com/user-attachments/assets/51cbb3e3-0a28-45b2-9d2b-9155b3eda5b2" />
 
 <img width="620" height="710" alt="image" src="https://github.com/user-attachments/assets/0f7eef99-4991-4847-83af-f889e270bb2b" />
@@ -184,6 +208,11 @@ BEGIN
 END;
 $$;
 ```
+Процедура ищет последнюю проверку студента по задаче и добавляет к ней запись Verter.
+Это полностью соответствует логике реальных систем 21/42:
+- Verter всегда идёт после P2P
+- и всегда относиться к последней P2P записи по задаче на текущий момент.
+
 <img width="539" height="711" alt="image" src="https://github.com/user-attachments/assets/245557ab-7ba4-4d6d-a341-65a7e2f043ee" />
 
 #### 3. Триггер: ограничение изменения P2P записей:
@@ -203,6 +232,12 @@ BEFORE UPDATE ON P2P
 FOR EACH ROW
 EXECUTE FUNCTION lock_p2p_changes();
 ```
+Статус P2P менять нельзя:
+- если проверка начата — она завершится Success или Failure
+- отменять/перезаписывать нельзя, только начинать новый check
+Триггер содержит проверку IF TG_OP = 'UPDATE' и выдаёт исключение.
+Это защищает данные от «подправлений» задним числом.
+
 <img width="628" height="710" alt="image" src="https://github.com/user-attachments/assets/93ec0b52-7fdf-4a5c-b897-cc4bae8f37cd" />
 
 Пробуем изменить запись
@@ -235,6 +270,12 @@ AFTER INSERT ON Verter
 FOR EACH ROW
 EXECUTE FUNCTION give_xp_after_success();
 ```
+Логика:
+- после вставки записи в Verter
+- если статус = Success
+- начисляется XP из таблицы Tasks
+Таким образом XP выдаётся строго после успешной проверки Verter.
+
 <img width="460" height="708" alt="image" src="https://github.com/user-attachments/assets/6402b37b-26d5-4038-b4bd-81af3662baf3" />
 
 Добавляем проверку Verter
@@ -267,6 +308,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 ```
+Формирует читабельную таблицу вида:
+| from_peer | to_peer | points |
+что удобно для отображения истории P2P-трансферов в интерфейсе.
+
 <img width="392" height="710" alt="image" src="https://github.com/user-attachments/assets/089a7af2-40e8-4093-b613-932171be4e9b" />
 
 #### 2. XP по пользователям и задачам
@@ -291,6 +336,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 ```
+Возвращает список вида:
+| peer | task | xp |
+То есть показывает кто, за какую задачу и сколько получил.
+Использует связи XP → Checks → Peers и Tasks.
+
 <img width="414" height="760" alt="image" src="https://github.com/user-attachments/assets/16f4f6db-6ebe-4885-afc5-878aed1755bb" />
 
 #### 3. Пиры, которые не покидали кампус весь день
@@ -312,6 +362,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 ```
+Находит студентов, которые:
+- были в кампусе в указанную дату
+- и не делали ни одного выхода (state = 'out')
+Используя агрегаты SUM и MIN, корректно определяется:
+- была ли активность в этот день
+- и были ли выходы
+
 <img width="581" height="161" alt="image" src="https://github.com/user-attachments/assets/6e359f05-fbed-41f0-a3e6-5cd0c14d9ef5" />
 
 <img width="477" height="713" alt="image" src="https://github.com/user-attachments/assets/b62609ee-4a7d-4ee0-ade7-990af57b3bb7" />
@@ -341,4 +398,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 ```
+Подсчитывает, сколько студент заработал или потерял P2P-очков.
+Логика:
+- если checking_peer, значит отдаёт → "-"
+- если checked_peer, значит получает → "+"
+- SUM по всем взаимодействиям
+В итоге получаем ТОП студентов по социальной активности.
+
 <img width="393" height="810" alt="image" src="https://github.com/user-attachments/assets/6fe11271-5f6c-4f7b-a8e7-7fd674a999cc" />
+
