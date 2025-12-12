@@ -236,9 +236,13 @@ FOR EACH ROW
 EXECUTE FUNCTION give_xp_after_success();
 ```
 <img width="460" height="708" alt="image" src="https://github.com/user-attachments/assets/6402b37b-26d5-4038-b4bd-81af3662baf3" />
+
 Добавляем проверку Verter
+
 <img width="377" height="678" alt="image" src="https://github.com/user-attachments/assets/6a5dc5e8-237a-411c-bd45-af0a85c1ef81" />
+
 Проверяем таблицу XP
+
 <img width="400" height="707" alt="image" src="https://github.com/user-attachments/assets/b83aa1fa-97b9-4afd-a3aa-1ca22c811f67" />
 
 ## Part #3 Функции получения данных
