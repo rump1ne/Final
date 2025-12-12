@@ -204,8 +204,11 @@ FOR EACH ROW
 EXECUTE FUNCTION lock_p2p_changes();
 ```
 <img width="628" height="710" alt="image" src="https://github.com/user-attachments/assets/93ec0b52-7fdf-4a5c-b897-cc4bae8f37cd" />
+
 Пробуем изменить запись
+
 <img width="542" height="720" alt="image" src="https://github.com/user-attachments/assets/144ce20d-0404-4c25-8ac2-8ba9a5ce9379" />
+
 Выдает ошибку, значит триггер работает правильно
 #### 4. Триггер: автоматическая выдача XP после успешной проверки:
 ```
