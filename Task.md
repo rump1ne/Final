@@ -128,6 +128,9 @@ nickname уникален — правильно, так исключаются 
 <img width="435" height="544" alt="image" src="https://github.com/user-attachments/assets/2c788331-8eba-4a2a-a4ed-54000b364887" />
 
 #### Таблица xp
+Это журнал начисления опыта.
+Он нужен, чтобы точно фиксировать, когда и за что студент получил XP, и не терять эту информацию при изменениях других таблиц.
+
 <img width="332" height="544" alt="image" src="https://github.com/user-attachments/assets/0f154ca4-7fb5-4fe3-b961-ff151b86c11c" />
 
 ## Part #2 Процедуры + триггеры
